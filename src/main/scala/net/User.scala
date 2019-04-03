@@ -11,7 +11,6 @@ import java.util.UUID
 
 trait User[F[_]] {
   def get(id: UUID): F[Option[User.ApplicationUser]]
-  def upsert(id: UUID, u: User.ApplicationUser): F[Unit]
 }
 object User {
   final case class ApplicationUser(id: UUID, name: String, hobbies: List[String])
@@ -25,14 +24,6 @@ object User {
         } yield {
           ApplicationUser(id, name, hobbies)
         }
-    }
-
-    implicit val encoder: Encoder[ApplicationUser] = new Encoder[ApplicationUser] {
-      final def apply(a: ApplicationUser): Json = Json.obj(
-        ("id",      Json.fromString(a.id.toString)),
-        ("name",    Json.fromString(a.name)),
-        ("hobbies", Json.fromValues(a.hobbies.map(Json.fromString)))        
-      )
     }
   }
   
@@ -69,27 +60,5 @@ object User {
         case t                     => UserError(uri, id, t)
       }
     }
-
-    private implicit val applicationUserEncoder: EntityEncoder[F, ApplicationUser] =
-      jsonEncoderOf[F, ApplicationUser]
-    
-    override def upsert(id: UUID, u: User.ApplicationUser): F[Unit] = {
-
-      val uri: Uri = base / "users" / id.toString
-
-      val req: F[Request[F]] = Request[F](method = Method.PUT, uri = uri).withBody(u)
-
-      val response: F[Unit] =
-        httpClient.fetch[Unit](req) {
-          case Status.NoContent(_) => F.unit
-          case unexpectedStatus    => F.raiseError(UserError(uri, id, UnexpectedStatus(unexpectedStatus.status)))
-        }
-
-      MonadError[F, Throwable].adaptError(response) {
-        case ue @ UserError(_,_,_) => ue
-        case t                     => UserError(uri, id, t)
-      }
-    }
   }
-  
 }
