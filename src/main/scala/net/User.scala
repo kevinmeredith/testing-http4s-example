@@ -20,7 +20,7 @@ object User {
       final def apply(c: HCursor): Decoder.Result[ApplicationUser] =
         for {
           id      <- c.downField("id").as[UUID]
-          name    <- c.downField("user").as[String]
+          name    <- c.downField("name").as[String]
           hobbies <- c.downField("hobbies").as[List[String]]
         } yield {
           ApplicationUser(id, name, hobbies)
@@ -34,7 +34,6 @@ object User {
         ("hobbies", Json.fromValues(a.hobbies.map(Json.fromString)))        
       )
     }
-    
   }
   
   final case class UserError(uri: Uri, id: UUID, t: Throwable)
